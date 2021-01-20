@@ -33,71 +33,71 @@ SlippiReplayComm::SlippiReplayComm()
 {
   INFO_LOG(EXPANSIONINTERFACE, "SlippiReplayComm: Using playback config path: %s",
            SConfig::GetInstance().m_strSlippiInput.c_str());
-  configFilePath = SConfig::GetInstance().m_strSlippiInput.c_str();
+  m_config_file_path = SConfig::GetInstance().m_strSlippiInput.c_str();
 }
 
 SlippiReplayComm::~SlippiReplayComm()
 {
 }
 
-SlippiReplayComm::CommSettings SlippiReplayComm::getSettings()
+SlippiReplayComm::CommSettings SlippiReplayComm::GetSettings()
 {
-  return commFileSettings;
+  return m_comm_file_settings;
 }
 
-std::string SlippiReplayComm::getReplayPath()
+std::string SlippiReplayComm::GetReplayPath()
 {
-  std::string replayFilePath = commFileSettings.replayPath;
-  if (commFileSettings.mode == "queue")
+  std::string replay_file_path = m_comm_file_settings.replayPath;
+  if (m_comm_file_settings.mode == "queue")
   {
     // If we are in queue mode, let's grab the replay from the queue instead
-    replayFilePath = commFileSettings.queue.empty() ? "" : commFileSettings.queue.front().path;
+    replay_file_path = m_comm_file_settings.queue.empty() ? "" : m_comm_file_settings.queue.front().path;
   }
 
-  return replayFilePath;
+  return replay_file_path;
 }
 
-bool SlippiReplayComm::isNewReplay()
+bool SlippiReplayComm::IsNewReplay()
 {
-  loadFile();
-  std::string replayFilePath = getReplayPath();
+  LoadFile();
+  std::string replay_file_path = GetReplayPath();
 
-  bool hasPathChanged = replayFilePath != previousReplayLoaded;
-  bool isReplay = !!replayFilePath.length();
+  bool has_path_changed = replay_file_path != m_previous_replay_loaded;
+  bool is_replay = !!replay_file_path.length();
 
   // The previous check is mostly good enough but it does not
   // work if someone tries to load the same replay twice in a row
   // the commandId was added to deal with this
-  bool hasCommandChanged = commFileSettings.commandId != previousCommandId;
+  bool has_command_changed = m_comm_file_settings.commandId != m_previous_command_id;
 
   // This checks if the queue index has changed, this is to fix the
   // issue where the same replay showing up twice in a row in a
   // queue would never cause this function to return true
-  bool hasQueueIdxChanged = false;
-  if (commFileSettings.mode == "queue" && !commFileSettings.queue.empty())
+  bool has_queue_idx_changed = false;
+  if (m_comm_file_settings.mode == "queue" && !m_comm_file_settings.queue.empty())
   {
-    hasQueueIdxChanged = commFileSettings.queue.front().index != previousIndex;
+    has_queue_idx_changed = m_comm_file_settings.queue.front().index != m_previous_index;
   }
 
-  bool isNewReplay = hasPathChanged || hasCommandChanged || hasQueueIdxChanged;
+  bool is_new_replay = has_path_changed || has_command_changed || has_queue_idx_changed;
 
-  return isReplay && isNewReplay;
+  return is_replay && is_new_replay;
 }
 
-void SlippiReplayComm::nextReplay()
+void SlippiReplayComm::NextReplay()
 {
-  if (commFileSettings.queue.empty())
+  if (m_comm_file_settings.queue.empty())
     return;
 
   // Increment queue position
-  commFileSettings.queue.pop();
+  m_comm_file_settings.queue.pop();
 }
 
-std::unique_ptr<Slippi::SlippiGame> SlippiReplayComm::loadGame()
+std::unique_ptr<Slippi::SlippiGame> SlippiReplayComm::LoadGame()
 {
-  auto replayFilePath = getReplayPath();
-  INFO_LOG(EXPANSIONINTERFACE, "Attempting to load replay file %s", replayFilePath.c_str());
-  auto result = Slippi::SlippiGame::FromFile(replayFilePath);
+  auto replay_file_path = GetReplayPath();
+  INFO_LOG(EXPANSIONINTERFACE, "Attempting to load replay file %s", replay_file_path.c_str());
+  auto result = Slippi::SlippiGame::FromFile(replay_file_path);
   if (result)
   {
     // If we successfully loaded a SlippiGame, indicate as such so
@@ -105,68 +105,68 @@ std::unique_ptr<Slippi::SlippiGame> SlippiReplayComm::loadGame()
     // file did not exist yet, result will be falsy, which will keep
     // the replay considered new so that the file will attempt to be
     // loaded again
-    previousReplayLoaded = replayFilePath;
-    previousCommandId = commFileSettings.commandId;
-    if (commFileSettings.mode == "queue" && !commFileSettings.queue.empty())
+    m_previous_replay_loaded = replay_file_path;
+    m_previous_command_id = m_comm_file_settings.commandId;
+    if (m_comm_file_settings.mode == "queue" && !m_comm_file_settings.queue.empty())
     {
-      previousIndex = commFileSettings.queue.front().index;
+      m_previous_index = m_comm_file_settings.queue.front().index;
     }
 
     WatchSettings ws;
-    ws.path = replayFilePath;
-    ws.startFrame = commFileSettings.startFrame;
-    ws.endFrame = commFileSettings.endFrame;
-    if (commFileSettings.mode == "queue")
+    ws.path = replay_file_path;
+    ws.startFrame = m_comm_file_settings.startFrame;
+    ws.endFrame = m_comm_file_settings.endFrame;
+    if (m_comm_file_settings.mode == "queue")
     {
-      ws = commFileSettings.queue.front();
+      ws = m_comm_file_settings.queue.front();
     }
 
-    if (commFileSettings.outputOverlayFiles)
+    if (m_comm_file_settings.outputOverlayFiles)
     {
-      std::string dirpath = File::GetExeDirectory();
-      File::WriteStringToFile(ws.gameStation, dirpath + DIR_SEP + "Slippi/out-station.txt");
-      File::WriteStringToFile(ws.gameStartAt, dirpath + DIR_SEP + "Slippi/out-time.txt");
+      std::string dir_path = File::GetExeDirectory();
+      File::WriteStringToFile(ws.gameStation, dir_path + DIR_SEP + "Slippi/out-station.txt");
+      File::WriteStringToFile(ws.gameStartAt, dir_path + DIR_SEP + "Slippi/out-time.txt");
     }
 
-    current = ws;
+    m_current = ws;
   }
 
   return std::move(result);
 }
 
-void SlippiReplayComm::loadFile()
+void SlippiReplayComm::LoadFile()
 {
   // TODO: Consider even only checking file mod time every 250 ms or something? Not sure
   // TODO: what the perf impact is atm
 
-  u64 modTime = File::GetFileModTime(configFilePath);
-  if (modTime != 0 && modTime == configLastLoadModTime)
+  u64 mod_time = File::GetFileModTime(m_config_file_path);
+  if (mod_time != 0 && mod_time == m_config_last_load_mod_time)
   {
     // TODO: Maybe be smarter than just using mod time? Look for other things that would
     // TODO: indicate that file has changed and needs to be reloaded?
     return;
   }
 
-  WARN_LOG(EXPANSIONINTERFACE, "File change detected in comm file: %s", configFilePath.c_str());
-  configLastLoadModTime = modTime;
+  WARN_LOG(EXPANSIONINTERFACE, "File change detected in comm file: %s", m_config_file_path.c_str());
+  m_config_last_load_mod_time = mod_time;
 
   // TODO: Maybe load file in a more intelligent way to save
   // TODO: file operations
-  std::string commFileContents;
-  File::ReadFileToString(configFilePath, commFileContents);
+  std::string comm_file_contents;
+  File::ReadFileToString(m_config_file_path, comm_file_contents);
 
-  auto res = json::parse(commFileContents, nullptr, false);
+  auto res = json::parse(comm_file_contents, nullptr, false);
   if (res.is_discarded() || !res.is_object())
   {
     // Happens if there is a parse error, I think?
-    commFileSettings.mode = "normal";
-    commFileSettings.replayPath = "";
-    commFileSettings.startFrame = Slippi::GAME_FIRST_FRAME;
-    commFileSettings.endFrame = INT_MAX;
-    commFileSettings.commandId = "";
-    commFileSettings.outputOverlayFiles = false;
-    commFileSettings.isRealTimeMode = false;
-    commFileSettings.rollbackDisplayMethod = "off";
+    m_comm_file_settings.mode = "normal";
+    m_comm_file_settings.replayPath = "";
+    m_comm_file_settings.startFrame = Slippi::GAME_FIRST_FRAME;
+    m_comm_file_settings.endFrame = INT_MAX;
+    m_comm_file_settings.commandId = "";
+    m_comm_file_settings.outputOverlayFiles = false;
+    m_comm_file_settings.isRealTimeMode = false;
+    m_comm_file_settings.rollbackDisplayMethod = "off";
 
     if (res.is_string())
     {
@@ -174,7 +174,7 @@ void SlippiReplayComm::loadFile()
       // This is really only here because when developing it might be easier
       // to just throw in a string instead of an object
 
-      commFileSettings.replayPath = res.get<std::string>();
+      m_comm_file_settings.replayPath = res.get<std::string>();
     }
     else
     {
@@ -182,23 +182,23 @@ void SlippiReplayComm::loadFile()
 
       // Reset in the case of read error. this fixes a race condition where file mod time changes
       // but the file is not readable yet?
-      configLastLoadModTime = 0;
+      m_config_last_load_mod_time = 0;
     }
 
     return;
   }
 
   // TODO: Support file with only path string
-  commFileSettings.mode = res.value("mode", "normal");
-  commFileSettings.replayPath = res.value("replay", "");
-  commFileSettings.startFrame = res.value("startFrame", Slippi::GAME_FIRST_FRAME);
-  commFileSettings.endFrame = res.value("endFrame", INT_MAX);
-  commFileSettings.commandId = res.value("commandId", "");
-  commFileSettings.outputOverlayFiles = res.value("outputOverlayFiles", false);
-  commFileSettings.isRealTimeMode = res.value("isRealTimeMode", false);
-  commFileSettings.rollbackDisplayMethod = res.value("rollbackDisplayMethod", "off");
+  m_comm_file_settings.mode = res.value("mode", "normal");
+  m_comm_file_settings.replayPath = res.value("replay", "");
+  m_comm_file_settings.startFrame = res.value("startFrame", Slippi::GAME_FIRST_FRAME);
+  m_comm_file_settings.endFrame = res.value("endFrame", INT_MAX);
+  m_comm_file_settings.commandId = res.value("commandId", "");
+  m_comm_file_settings.outputOverlayFiles = res.value("outputOverlayFiles", false);
+  m_comm_file_settings.isRealTimeMode = res.value("isRealTimeMode", false);
+  m_comm_file_settings.rollbackDisplayMethod = res.value("rollbackDisplayMethod", "off");
 
-  if (isFirstLoad)
+  if (m_is_first_load)
   {
     auto queue = res["queue"];
     if (queue.is_array())
@@ -215,10 +215,10 @@ void SlippiReplayComm::loadFile()
         w.gameStation = el.value("gameStation", "");
         w.index = index++;
 
-        commFileSettings.queue.push(w);
+        m_comm_file_settings.queue.push(w);
       };
     }
 
-    isFirstLoad = false;
+    m_is_first_load = false;
   }
 }

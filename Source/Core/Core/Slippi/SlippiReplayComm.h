@@ -40,29 +40,29 @@ public:
   SlippiReplayComm();
   ~SlippiReplayComm();
 
-  WatchSettings current;
+  CommSettings GetSettings();
+  void NextReplay();
+  bool IsNewReplay();
+  std::unique_ptr<Slippi::SlippiGame> LoadGame();
 
-  CommSettings getSettings();
-  void nextReplay();
-  bool isNewReplay();
-  std::unique_ptr<Slippi::SlippiGame> loadGame();
+  WatchSettings m_current;
 
 private:
-  void loadFile();
-  std::string getReplayPath();
+  void LoadFile();
+  std::string GetReplayPath();
 
-  std::string configFilePath;
-  json fileData;
-  std::string previousReplayLoaded;
-  std::string previousCommandId;
-  int previousIndex;
+  std::string m_config_file_path;
+  json m_file_data;
+  std::string m_previous_replay_loaded;
+  std::string m_previous_command_id;
+  int m_previous_index;
 
-  u64 configLastLoadModTime;
+  u64 m_config_last_load_mod_time;
 
   // Queue stuff
-  bool isFirstLoad = true;
-  bool provideNew = false;
-  int queuePos = 0;
+  bool m_is_first_load = true;
+  bool m_provide_new = false;
+  int m_queue_pos = 0;
 
-  CommSettings commFileSettings;
+  CommSettings m_comm_file_settings;
 };

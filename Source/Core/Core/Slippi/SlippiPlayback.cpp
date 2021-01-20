@@ -180,7 +180,7 @@ void SlippiPlaybackStatus::seekToFrame()
     }
 
     std::unique_lock<std::mutex> ffwLock(ffwMtx);
-    auto replayCommSettings = g_replayComm->getSettings();
+    auto replayCommSettings = g_replayComm->GetSettings();
     if (replayCommSettings.mode == "queue")
       updateWatchSettingsStartEnd();
 
@@ -304,14 +304,14 @@ bool SlippiPlaybackStatus::shouldFFWFrame(s32 frameIndex) const
 
 void SlippiPlaybackStatus::updateWatchSettingsStartEnd()
 {
-  int startFrame = g_replayComm->current.startFrame;
-  int endFrame = g_replayComm->current.endFrame;
+  int startFrame = g_replayComm->m_current.startFrame;
+  int endFrame = g_replayComm->m_current.endFrame;
   if (startFrame != Slippi::GAME_FIRST_FRAME || endFrame != INT_MAX)
   {
     if (g_playbackStatus->targetFrameNum < startFrame)
-      g_replayComm->current.startFrame = g_playbackStatus->targetFrameNum;
+      g_replayComm->m_current.startFrame = g_playbackStatus->targetFrameNum;
     if (g_playbackStatus->targetFrameNum > endFrame)
-      g_replayComm->current.endFrame = INT_MAX;
+      g_replayComm->m_current.endFrame = INT_MAX;
   }
 }
 

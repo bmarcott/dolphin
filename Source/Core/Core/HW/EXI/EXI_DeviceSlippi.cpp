@@ -628,7 +628,7 @@ void CEXISlippi::prepareGameInfo(u8* payload)
   SConfig::GetInstance().m_OCFactor = g_playbackStatus->origOCFactor;
 
   // Start in Fast Forward if this is mirrored
-  auto replayCommSettings = g_replayComm->getSettings();
+  auto replayCommSettings = g_replayComm->GetSettings();
   if (!g_playbackStatus->isHardFFW)
     g_playbackStatus->isHardFFW = replayCommSettings.mode == "mirror";
   g_playbackStatus->lastFFWFrame = INT_MIN;
@@ -1068,7 +1068,7 @@ void CEXISlippi::prepareGeckoList()
   std::unordered_map<u32, bool> blacklist;
   blacklist.insert(staticBlacklist.begin(), staticBlacklist.end());
 
-  auto replayCommSettings = g_replayComm->getSettings();
+  auto replayCommSettings = g_replayComm->GetSettings();
   if (replayCommSettings.rollbackDisplayMethod == "off")
   {
     // Some codes should only be blacklisted when not displaying rollbacks, these are codes
@@ -1210,7 +1210,7 @@ void CEXISlippi::prepareFrameData(u8* payload)
   s32 frameIndex = payload[0] << 24 | payload[1] << 16 | payload[2] << 8 | payload[3];
 
   // If loading from queue, move on to the next replay if we have past endFrame
-  auto watchSettings = g_replayComm->current;
+  auto watchSettings = g_replayComm->m_current;
   if (frameIndex > watchSettings.endFrame)
   {
     INFO_LOG(SLIPPI, "Killing game because we are past endFrame");
@@ -1219,7 +1219,7 @@ void CEXISlippi::prepareFrameData(u8* payload)
   }
 
   // If a new replay should be played, terminate the current game
-  auto isNewReplay = g_replayComm->isNewReplay();
+  auto isNewReplay = g_replayComm->IsNewReplay();
   if (isNewReplay)
   {
     m_read_queue.push_back(FRAME_RESP_TERMINATE);
@@ -1251,7 +1251,7 @@ void CEXISlippi::prepareFrameData(u8* payload)
     }
   }
 
-  auto commSettings = g_replayComm->getSettings();
+  auto commSettings = g_replayComm->GetSettings();
   if (commSettings.rollbackDisplayMethod == "normal")
   {
     auto nextFrame = m_current_game->GetFrameAt(frameSeqIdx);
@@ -1417,17 +1417,17 @@ void CEXISlippi::prepareIsFileReady()
 {
   m_read_queue.clear();
 
-  auto isNewReplay = g_replayComm->isNewReplay();
+  auto isNewReplay = g_replayComm->IsNewReplay();
   if (!isNewReplay)
   {
-    g_replayComm->nextReplay();
+    g_replayComm->NextReplay();
     m_read_queue.push_back(0);
     return;
   }
 
   // Attempt to load game if there is a new replay file
   // this can come pack falsy if the replay file does not exist
-  m_current_game = g_replayComm->loadGame();
+  m_current_game = g_replayComm->LoadGame();
   if (!m_current_game)
   {
     // Do not start if replay file doesn't exist
